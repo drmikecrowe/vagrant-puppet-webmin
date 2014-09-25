@@ -1,10 +1,8 @@
-class webmin {
-    #monit::package { "webmin": }
-
-    $base = "webmin_1.680_all.deb"
+class Virtualmin {
+    $base = "Virtualmin_1.700_all.deb"
     $url = "http://prdownloads.sourceforge.net/webadmin/"
     $archive = "/root/$base"
-    $installed = "/etc/webmin/version"
+    $installed = "/etc/Virtualmin/version"
 
     $dependencies = [
         "libapt-pkg-perl",
@@ -15,24 +13,45 @@ class webmin {
     ]
 
     package{$dependencies: ensure => installed}->
-    exec { "DownloadWebmin":
+    exec { "DownloadVirtualmin":
         cwd     => "/root",
         command => "/usr/bin/wget $url$base",
         creates => $archive,
     }
 
-    service { webmin:
+    service { Virtualmin:
         ensure   => running,
-        require  => Exec["InstallWebmin"],
+        require  => Exec["InstallVirtualmin"],
         provider => init;
     }
 
-    exec { "InstallWebmin":
+    exec { "InstallVirtualmin":
         cwd     => "/root",
         command => "/usr/bin/dpkg -i $archive",
         creates => $installed,
-        require => Exec["DownloadWebmin"],
-        notify  => Service[webmin],
+        require => Exec["DownloadVirtualmin"],
+        notify  => Service[Virtualmin],
+    }
+}
+
+class virtualmin {
+
+    exec { "DownloadVirtualmin":
+        cwd     => "/root",
+        command => "/usr/bin/wget $url$base",
+        creates => $archive,
     }
 
+    service { Virtualmin:
+        ensure   => running,
+        require  => Exec["InstallVirtualmin"],
+        provider => init;
+    }
+
+    exec { "InstallVirtualmin":
+        cwd     => "/root",
+        command => "/bin/sh install.sh",
+        creates => '/etc/virtualmin',
+        require => Exec["DownloadVirtualmin"]
+    }
 }
