@@ -1,8 +1,8 @@
-class Virtualmin {
-    $base = "Virtualmin_1.700_all.deb"
+class webmin {
+    $base = "webmin_1.700_all.deb"
     $url = "http://prdownloads.sourceforge.net/webadmin/"
     $archive = "/root/$base"
-    $installed = "/etc/Virtualmin/version"
+    $installed = "/etc/webmin/version"
 
     $dependencies = [
         "libapt-pkg-perl",
@@ -13,24 +13,24 @@ class Virtualmin {
     ]
 
     package{$dependencies: ensure => installed}->
-    exec { "DownloadVirtualmin":
+    exec { "DownloadWebmin":
         cwd     => "/root",
         command => "/usr/bin/wget $url$base",
         creates => $archive,
     }
 
-    service { Virtualmin:
-        ensure   => running,
-        require  => Exec["InstallVirtualmin"],
-        provider => init;
-    }
-
-    exec { "InstallVirtualmin":
+    exec { "InstallWebmin":
         cwd     => "/root",
         command => "/usr/bin/dpkg -i $archive",
         creates => $installed,
-        require => Exec["DownloadVirtualmin"],
-        notify  => Service[Virtualmin],
+        require => Exec["DownloadWebmin"],
+        notify  => Service[webmin],
+    }
+
+    service { webmin:
+        ensure   => running,
+        require  => Exec["InstallWebmin"],
+        provider => init;
     }
 }
 
@@ -38,20 +38,24 @@ class virtualmin {
 
     exec { "DownloadVirtualmin":
         cwd     => "/root",
-        command => "/usr/bin/wget $url$base",
-        creates => $archive,
+        command => "/usr/bin/wget http://software.virtualmin.com/gpl/scripts/install.sh",
+        require => [
+            Exec["InstallWebmin"],
+            Package['mysql-server']
+        ],
+        creates => '/root/install.sh',
+    }->
+    exec { "InstallVirtualmin":
+        cwd     => "/root",
+        command => "/bin/sh /root/install.sh",
+        creates => '/etc/virtualmin-license',
+        require => Exec["DownloadVirtualmin"],
+        timeout  => 7200,
     }
 
     service { Virtualmin:
         ensure   => running,
         require  => Exec["InstallVirtualmin"],
-        provider => init;
-    }
-
-    exec { "InstallVirtualmin":
-        cwd     => "/root",
-        command => "/bin/sh install.sh",
-        creates => '/etc/virtualmin',
-        require => Exec["DownloadVirtualmin"]
+        provider => init,
     }
 }
